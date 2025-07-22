@@ -65,6 +65,11 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        heatmap: {
+          low: 'hsl(var(--heatmap-low))',
+          medium: 'hsl(var(--heatmap-medium))',
+          high: 'hsl(var(--heatmap-high))',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
