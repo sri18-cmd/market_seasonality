@@ -164,52 +164,32 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
 
 
 export function SeasonalityCalendar({
-  onDaySelect,
+  data,
   instrument,
   selectedDay,
   onSelectedDayChange,
   viewMode,
+  onMonthChange
 }: {
-  onDaySelect: (data: DayData | null) => void;
+  data: Map<string, DayData>;
   instrument: string;
   selectedDay: Date | undefined;
   onSelectedDayChange: (day: Date | undefined) => void;
   viewMode: ViewMode;
+  onMonthChange: (date: Date) => void;
 }) {
   const [month, setMonth] = React.useState(selectedDay || new Date());
-  const [data, setData] = React.useState<Map<string, DayData>>(new Map());
-
-  React.useEffect(() => {
-    const newMonthData = generateMonthData(month, instrument);
-    setData(newMonthData);
-  }, [month, instrument]);
   
   React.useEffect(() => {
-    if (selectedDay) {
-      const dayKey = format(selectedDay, "yyyy-MM-dd");
-      // Ensure data for the current month is loaded if selectedDay changes
-      if (!data.has(dayKey)) {
-        const newMonthData = generateMonthData(selectedDay, instrument);
-        setData(newMonthData);
-        const dayData = newMonthData.get(dayKey);
-        if (dayData && !dayData.unavailable) {
-          onDaySelect(dayData);
-        } else {
-          onDaySelect(null);
-        }
-      } else {
-        const dayData = data.get(dayKey);
-        if (dayData && !dayData.unavailable) {
-          onDaySelect(dayData);
-        } else {
-          onDaySelect(null);
-        }
-      }
-    } else {
-      onDaySelect(null);
+    if (selectedDay && selectedDay.getMonth() !== month.getMonth()) {
+        setMonth(selectedDay);
     }
-  }, [selectedDay, data, onDaySelect, instrument]);
+  }, [selectedDay, month]);
 
+  const handleMonthChange = (newMonth: Date) => {
+    setMonth(newMonth);
+    onMonthChange(newMonth);
+  };
 
   const handleDaySelection = (day: Date | undefined) => {
     if (day && isFuture(day)) {
@@ -217,7 +197,7 @@ export function SeasonalityCalendar({
     }
     onSelectedDayChange(day);
     if (day && day.getMonth() !== month.getMonth()) {
-      setMonth(day);
+      handleMonthChange(day);
     }
   };
 
@@ -229,7 +209,7 @@ export function SeasonalityCalendar({
         selected={selectedDay}
         onSelect={handleDaySelection}
         month={month}
-        onMonthChange={setMonth}
+        onMonthChange={handleMonthChange}
         ISOWeek
         disabled={isFuture}
         showOutsideDays={false}

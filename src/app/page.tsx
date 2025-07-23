@@ -15,16 +15,36 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPanel } from "@/components/dashboard-panel";
 import { SeasonalityCalendar } from "@/components/seasonality-calendar";
 import type { DayData, ViewMode } from "@/lib/types";
+import { generateMonthData } from "@/components/seasonality-calendar";
+import { format } from "date-fns";
+
 
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
   const [selectedData, setSelectedData] = React.useState<DayData | null>(null);
   const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(new Date());
   const [instrument, setInstrument] = React.useState("btc");
+  const [monthData, setMonthData] = React.useState<Map<string, DayData>>(new Map());
 
-  const handleDaySelect = React.useCallback((data: DayData | null) => {
-    setSelectedData(data);
-  }, []);
+  React.useEffect(() => {
+    if (selectedDay) {
+        setMonthData(generateMonthData(selectedDay, instrument));
+    }
+  }, [selectedDay, instrument]);
+
+  React.useEffect(() => {
+      if (selectedDay) {
+          const dayKey = format(selectedDay, "yyyy-MM-dd");
+          const data = monthData.get(dayKey);
+          if (data && !data.unavailable) {
+              setSelectedData(data);
+          } else {
+              setSelectedData(null);
+          }
+      } else {
+          setSelectedData(null);
+      }
+  }, [selectedDay, monthData]);
   
   const handleInstrumentChange = (newInstrument: string) => {
     setInstrument(newInstrument);
@@ -100,11 +120,12 @@ export default function Home() {
             </div>
             
             <SeasonalityCalendar 
-              onDaySelect={handleDaySelect}
+              data={monthData}
               instrument={instrument}
               selectedDay={selectedDay}
               onSelectedDayChange={handleSelectedDayChange}
               viewMode={viewMode}
+              onMonthChange={(date) => setMonthData(generateMonthData(date, instrument))}
             />
             
           </div>
