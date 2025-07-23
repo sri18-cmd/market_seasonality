@@ -16,6 +16,7 @@ import {
   DollarSign,
   Calendar as CalendarIcon,
   AreaChart,
+  Download,
 } from "lucide-react";
 import {
   BarChart,
@@ -31,6 +32,7 @@ import {
   LineChart as RechartsLineChart,
 } from "recharts";
 import { Separator } from "./ui/separator";
+import { Button } from "./ui/button";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
@@ -50,6 +52,19 @@ export function DashboardPanel({
   selectedData: DayData | null;
   viewMode: ViewMode;
 }) {
+
+  const handleDownload = () => {
+    if (!selectedData) return;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(selectedData, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `market_data_${selectedData.date.toISOString().split('T')[0]}.json`;
+    link.click();
+  };
+
+
   if (!selectedData) {
     return (
       <Card className="w-full lg:w-[24rem] xl:w-[26rem] sticky top-8">
@@ -59,8 +74,7 @@ export function DashboardPanel({
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Hover over a date to see a quick summary or click to pin the data
-            here. Use the controls to change the instrument or view.
+            Click a date on the calendar to see detailed metrics. Use the controls to change the instrument or view.
           </p>
         </CardContent>
       </Card>
@@ -80,18 +94,23 @@ export function DashboardPanel({
 
   return (
     <Card className="w-full lg:w-[24rem] xl:w-[26rem] shadow-lg border-2 sticky top-8">
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2">
-          <CalendarIcon className="size-6" />
-          {date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </CardTitle>
-        <CardDescription>
-          Detailed metrics for the selected day
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle className="font-headline flex items-center gap-2">
+            <CalendarIcon className="size-6" />
+            {date.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </CardTitle>
+          <CardDescription>
+            Detailed metrics for the selected day
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="icon" onClick={handleDownload} aria-label="Download data">
+          <Download className="size-4" />
+        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4 text-center">

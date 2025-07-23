@@ -114,14 +114,20 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
 }
 
 
-export function SeasonalityCalendar({ onDaySelect }: { onDaySelect: (data: DayData | null) => void }) {
+export function SeasonalityCalendar({ 
+  onDaySelect,
+  instrument
+}: { 
+  onDaySelect: (data: DayData | null) => void;
+  instrument: string;
+}) {
   const [month, setMonth] = React.useState(new Date());
   const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(new Date());
   const [data, setData] = React.useState<Map<string, DayData>>(new Map());
 
   React.useEffect(() => {
     setData(generateMonthData(month));
-  }, [month]);
+  }, [month, instrument]);
   
   React.useEffect(() => {
     if (selectedDay) {

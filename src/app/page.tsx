@@ -14,38 +14,50 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPanel } from "@/components/dashboard-panel";
 import { SeasonalityCalendar } from "@/components/seasonality-calendar";
 import type { DayData, ViewMode } from "@/lib/types";
+import { format } from "date-fns";
+
+// Helper to generate random data for a given date
+const generateDataForDay = (date: Date): DayData => {
+  const volatility = Math.random();
+  const liquidity = Math.random();
+  const performance = (Math.random() - 0.5) * 5;
+  const open = 100 + Math.random() * 10;
+  const close = open + (performance / 100) * open;
+  const high = Math.max(open, close) + Math.random() * 2;
+  const low = Math.min(open, close) - Math.random() * 2;
+  
+  return {
+    date: date,
+    volatility,
+    liquidity,
+    performance,
+    price: { open, high, low, close },
+    history: Array.from({ length: 12 }, (_, i) => ({
+      month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
+      volatility: Math.random() * 0.8 + 0.1,
+      liquidity: Math.random() * 800 + 200,
+    }))
+  };
+};
+
 
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
   const [selectedData, setSelectedData] = React.useState<DayData | null>(null);
+  const [instrument, setInstrument] = React.useState("btc");
+  const [calendarData, setCalendarData] = React.useState<Map<string, DayData>>(new Map());
   
   const handleDaySelect = (data: DayData | null) => {
     setSelectedData(data);
   };
   
+  const handleInstrumentChange = (newInstrument: string) => {
+    setInstrument(newInstrument);
+  };
+  
   // Initialize with today's data on mount
   React.useEffect(() => {
-    const today = new Date();
-    const volatility = Math.random();
-    const liquidity = Math.random();
-    const performance = (Math.random() - 0.5) * 5;
-    const open = 100 + Math.random() * 10;
-    const close = open + (performance / 100) * open;
-    const high = Math.max(open, close) + Math.random() * 2;
-    const low = Math.min(open, close) - Math.random() * 2;
-    
-    const todayData: DayData = {
-      date: today,
-      volatility,
-      liquidity,
-      performance,
-      price: { open, high, low, close },
-      history: Array.from({ length: 12 }, (_, i) => ({
-        month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
-        volatility: Math.random() * 0.8 + 0.1,
-        liquidity: Math.random() * 800 + 200,
-      }))
-    };
+    const todayData = generateDataForDay(new Date());
     setSelectedData(todayData);
   }, []);
 
@@ -67,7 +79,7 @@ export default function Home() {
         <main className="flex flex-col lg:flex-row gap-8">
           <div className="flex-1">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-              <Select defaultValue="btc">
+              <Select value={instrument} onValueChange={handleInstrumentChange}>
                 <SelectTrigger className="w-full sm:w-[200px] h-11 text-base font-semibold">
                   <SelectValue placeholder="Select instrument" />
                 </SelectTrigger>
@@ -108,13 +120,16 @@ export default function Home() {
               <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full sm:w-auto">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="day">Day</TabsTrigger>
-                  <TabsTrigger value="week">Week</TabsTrigger>
-                  <TabsTrigger value="month">Month</TabsTrigger>
+                  <TabsTrigger value="week" disabled>Week</TabsTrigger>
+                  <TabsTrigger value="month" disabled>Month</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             
-            <SeasonalityCalendar onDaySelect={handleDaySelect} />
+            <SeasonalityCalendar 
+              onDaySelect={handleDaySelect}
+              instrument={instrument}
+            />
             
           </div>
 
