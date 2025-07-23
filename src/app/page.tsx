@@ -89,8 +89,8 @@ export default function Home() {
               <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full sm:w-auto">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="day">Day</TabsTrigger>
-                  <TabsTrigger value="week" disabled>Week</TabsTrigger>
-                  <TabsTrigger value="month" disabled>Month</TabsTrigger>
+                  <TabsTrigger value="week">Week</TabsTrigger>
+                  <TabsTrigger value="month">Month</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -100,12 +100,18 @@ export default function Home() {
               instrument={instrument}
               selectedDay={selectedDay}
               onSelectedDayChange={setSelectedDay}
+              viewMode={viewMode}
             />
             
           </div>
 
           <div className="w-full lg:w-[24rem] xl:w-[26rem] shrink-0">
-             <DashboardPanel selectedData={selectedData} viewMode={viewMode} />
+             <DashboardPanel 
+                selectedData={selectedData} 
+                viewMode={viewMode} 
+                instrument={instrument}
+                selectedDay={selectedDay}
+              />
           </div>
         </main>
       </div>

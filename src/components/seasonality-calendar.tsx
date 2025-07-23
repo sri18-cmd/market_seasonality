@@ -10,7 +10,7 @@ import {
 import { DayPicker, type DayProps } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import type { DayData } from "@/lib/types";
+import type { DayData, ViewMode } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
 
-function generateMonthData(dateInMonth: Date, instrument: string): Map<string, DayData> {
+export function generateMonthData(dateInMonth: Date, instrument: string): Map<string, DayData> {
   const data = new Map<string, DayData>();
   const days = eachDayOfInterval({
     start: startOfMonth(dateInMonth),
@@ -127,11 +127,13 @@ export function SeasonalityCalendar({
   instrument,
   selectedDay,
   onSelectedDayChange,
+  viewMode,
 }: {
   onDaySelect: (data: DayData | null) => void;
   instrument: string;
   selectedDay: Date | undefined;
   onSelectedDayChange: (day: Date | undefined) => void;
+  viewMode: ViewMode;
 }) {
   const [month, setMonth] = React.useState(selectedDay || new Date());
   const [data, setData] = React.useState<Map<string, DayData>>(new Map());
@@ -146,17 +148,23 @@ export function SeasonalityCalendar({
         const dayKey = format(selectedDay, "yyyy-MM-dd");
         onDaySelect(newMonthData.get(dayKey) || null);
     }
-  }, [month, instrument, selectedDay, onDaySelect]);
+  }, [month, instrument]);
 
-
-  const handleDaySelection = (day: Date | undefined) => {
-    onSelectedDayChange(day);
-    if (day) {
-      const dayKey = format(day, "yyyy-MM-dd");
+  React.useEffect(() => {
+    // This effect handles passing up the correct day's data when the selected day changes.
+    if (selectedDay) {
+      const dayKey = format(selectedDay, "yyyy-MM-dd");
+      // Data for the current month should already be in state.
+      // If selectedDay is in a different month, the other useEffect will handle it.
       onDaySelect(data.get(dayKey) || null);
     } else {
       onDaySelect(null);
     }
+  }, [selectedDay, data, onDaySelect]);
+
+
+  const handleDaySelection = (day: Date | undefined) => {
+    onSelectedDayChange(day);
   };
 
 

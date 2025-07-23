@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { DayData, ViewMode } from "@/lib/types";
@@ -17,6 +18,7 @@ import {
   Calendar as CalendarIcon,
   AreaChart,
   Download,
+  CalendarDays,
 } from "lucide-react";
 import {
   BarChart,
@@ -33,6 +35,9 @@ import {
 } from "recharts";
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
+import { generateMonthData } from "./seasonality-calendar";
+import React from "react";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
@@ -45,27 +50,102 @@ function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function aggregateData(data: DayData[]): Omit<DayData, 'date' | 'history'> | null {
+  if (data.length === 0) return null;
+
+  const totalVolatility = data.reduce((acc, d) => acc + d.volatility, 0);
+  const totalLiquidity = data.reduce((acc, d) => acc + d.liquidity, 0);
+  const firstDay = data[0];
+  const lastDay = data[data.length - 1];
+
+  const open = firstDay.price.open;
+  const close = lastDay.price.close;
+  const high = Math.max(...data.map(d => d.price.high));
+  const low = Math.min(...data.map(d => d.price.low));
+
+  const performance = ((close - open) / open) * 100;
+
+  return {
+    volatility: totalVolatility / data.length,
+    liquidity: totalLiquidity, // Sum for the period
+    performance,
+    price: { open, high, low, close },
+  };
+}
+
+
 export function DashboardPanel({
   selectedData,
   viewMode,
+  instrument,
+  selectedDay,
 }: {
   selectedData: DayData | null;
   viewMode: ViewMode;
+  instrument: string;
+  selectedDay: Date | undefined;
 }) {
+  const [periodData, setPeriodData] = React.useState<Omit<DayData, 'date' | 'history'> | null>(null);
+  const [title, setTitle] = React.useState<string>("Market Insights");
+
+  React.useEffect(() => {
+    if (!selectedDay || !instrument) {
+      setPeriodData(null);
+      return;
+    }
+    
+    const monthData = generateMonthData(selectedDay, instrument);
+    let dataForPeriod: DayData[] = [];
+    
+    if (viewMode === 'day' && selectedData) {
+      dataForPeriod = [selectedData];
+      setTitle(selectedDay.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }));
+    } else if (viewMode === 'week') {
+      const weekStart = startOfWeek(selectedDay, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(selectedDay, { weekStartsOn: 1 });
+      const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
+      daysInWeek.forEach(day => {
+        const dayKey = format(day, "yyyy-MM-dd");
+        const data = monthData.get(dayKey);
+        if(data) dataForPeriod.push(data);
+      });
+      setTitle(`Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
+    } else if (viewMode === 'month') {
+        const monthStart = startOfMonth(selectedDay);
+        const monthEnd = endOfMonth(selectedDay);
+        const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        daysInMonth.forEach(day => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const data = monthData.get(dayKey);
+            if(data) dataForPeriod.push(data);
+        });
+        setTitle(selectedDay.toLocaleDateString("en-US", { year: "numeric", month: "long" }));
+    }
+
+    if (viewMode === 'day' && selectedData) {
+      setPeriodData(selectedData);
+    } else if (dataForPeriod.length > 0) {
+      setPeriodData(aggregateData(dataForPeriod));
+    } else {
+      setPeriodData(null);
+    }
+
+  }, [selectedData, viewMode, selectedDay, instrument]);
+
 
   const handleDownload = () => {
-    if (!selectedData) return;
+    if (!periodData) return;
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(selectedData, null, 2)
+      JSON.stringify(periodData, null, 2)
     )}`;
     const link = document.createElement("a");
     link.href = jsonString;
-    link.download = `market_data_${selectedData.date.toISOString().split('T')[0]}.json`;
+    link.download = `market_data_${title.replace(/ /g, '_')}.json`;
     link.click();
   };
 
 
-  if (!selectedData) {
+  if (!periodData || !selectedDay) {
     return (
       <Card className="w-full lg:w-[24rem] xl:w-[26rem] sticky top-8">
         <CardHeader>
@@ -81,9 +161,11 @@ export function DashboardPanel({
     );
   }
 
-  const { date, volatility, liquidity, performance, price, history } = selectedData;
+  const { volatility, liquidity, performance, price } = periodData;
+  const history = selectedData?.history ?? [];
   const performanceColor = performance >= 0 ? "text-green-600" : "text-red-600";
   const PerformanceIcon = performance >= 0 ? TrendingUp : TrendingDown;
+  const Icon = viewMode === 'day' ? CalendarIcon : CalendarDays;
 
   const priceData = [
     { name: "Open", value: price.open },
@@ -97,15 +179,11 @@ export function DashboardPanel({
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
           <CardTitle className="font-headline flex items-center gap-2">
-            <CalendarIcon className="size-6" />
-            {date.toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            <Icon className="size-6" />
+            {title}
           </CardTitle>
           <CardDescription>
-            Detailed metrics for the selected day
+            Detailed metrics for the selected {viewMode}
           </CardDescription>
         </div>
         <Button variant="outline" size="icon" onClick={handleDownload} aria-label="Download data">
@@ -160,49 +238,53 @@ export function DashboardPanel({
         
         <Separator />
 
-        <div>
-          <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
-            <AreaChart className="size-5" /> Historical Volatility (12m)
-          </h3>
-          <ResponsiveContainer width="100%" height={150}>
-            <RechartsLineChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="#888888" fontSize={12} />
-              <YAxis tickFormatter={formatPercent} stroke="#888888" fontSize={12} />
-              <Tooltip 
-                formatter={(value: number) => formatPercent(value)}
-                contentStyle={{ 
-                  background: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border))', 
-                  borderRadius: 'var(--radius)'
-                }}
-              />
-              <Line type="monotone" dataKey="volatility" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r: 4}} activeDot={{r: 6}}/>
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div>
-           <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
-            <DollarSign className="size-5" /> Historical Liquidity (12m)
-          </h3>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="#888888" fontSize={12} />
-              <YAxis tickFormatter={(val) => `${val}M`} stroke="#888888" fontSize={12}/>
-              <Tooltip 
-                formatter={(value: number) => `${value.toFixed(0)}M`}
-                 contentStyle={{ 
-                  background: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border))', 
-                  borderRadius: 'var(--radius)'
-                }}
-              />
-              <Bar dataKey="liquidity" fill="hsl(var(--accent))" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {viewMode === 'day' && history.length > 0 && (
+          <>
+            <div>
+              <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+                <AreaChart className="size-5" /> Historical Volatility (12m)
+              </h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <RechartsLineChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+                  <YAxis tickFormatter={formatPercent} stroke="#888888" fontSize={12} />
+                  <Tooltip 
+                    formatter={(value: number) => formatPercent(value)}
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: 'var(--radius)'
+                    }}
+                  />
+                  <Line type="monotone" dataKey="volatility" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r: 4}} activeDot={{r: 6}}/>
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div>
+              <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+                <DollarSign className="size-5" /> Historical Liquidity (12m)
+              </h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+                  <YAxis tickFormatter={(val) => `${val}M`} stroke="#888888" fontSize={12}/>
+                  <Tooltip 
+                    formatter={(value: number) => `${value.toFixed(0)}M`}
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: 'var(--radius)'
+                    }}
+                  />
+                  <Bar dataKey="liquidity" fill="hsl(var(--accent))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        )}
 
       </CardContent>
     </Card>
