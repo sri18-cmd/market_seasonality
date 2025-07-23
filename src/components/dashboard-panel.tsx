@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
+  Receipt,
 } from "lucide-react";
 import {
   BarChart,
@@ -227,7 +228,7 @@ export function DashboardPanel({
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
           <div className="flex flex-col p-3 rounded-lg bg-muted/50">
              <div className="flex items-center justify-center gap-2">
                 <PerformanceIcon className={`size-5 ${performanceColor}`} />
@@ -246,6 +247,15 @@ export function DashboardPanel({
               {(volatility * 100).toFixed(1)}%
             </span>
           </div>
+        </div>
+         <div className="flex flex-col p-3 rounded-lg bg-muted/50 text-center">
+            <div className="flex items-center justify-center gap-2">
+                <Receipt className="size-5 text-foreground/80" />
+                <span className="text-sm font-semibold">Current Price</span>
+            </div>
+            <span className="font-bold text-2xl text-foreground/80">
+                {formatPrice(price.close)}
+            </span>
         </div>
 
         <div>
