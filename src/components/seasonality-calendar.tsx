@@ -182,17 +182,33 @@ export function SeasonalityCalendar({
   React.useEffect(() => {
     const newMonthData = generateMonthData(month, instrument);
     setData(newMonthData);
-    
+  }, [month, instrument]);
+  
+  React.useEffect(() => {
     if (selectedDay) {
-        const dayKey = format(selectedDay, "yyyy-MM-dd");
+      const dayKey = format(selectedDay, "yyyy-MM-dd");
+      // Ensure data for the current month is loaded if selectedDay changes
+      if (!data.has(dayKey)) {
+        const newMonthData = generateMonthData(selectedDay, instrument);
+        setData(newMonthData);
         const dayData = newMonthData.get(dayKey);
-         if (dayData && !dayData.unavailable) {
+        if (dayData && !dayData.unavailable) {
           onDaySelect(dayData);
         } else {
           onDaySelect(null);
         }
+      } else {
+        const dayData = data.get(dayKey);
+        if (dayData && !dayData.unavailable) {
+          onDaySelect(dayData);
+        } else {
+          onDaySelect(null);
+        }
+      }
+    } else {
+      onDaySelect(null);
     }
-  }, [month, instrument, selectedDay]);
+  }, [selectedDay, data, onDaySelect, instrument]);
 
 
   const handleDaySelection = (day: Date | undefined) => {
@@ -200,6 +216,9 @@ export function SeasonalityCalendar({
         return;
     }
     onSelectedDayChange(day);
+    if (day && day.getMonth() !== month.getMonth()) {
+      setMonth(day);
+    }
   };
 
 
