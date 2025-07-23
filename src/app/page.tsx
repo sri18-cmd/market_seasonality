@@ -17,30 +17,6 @@ import { SeasonalityCalendar } from "@/components/seasonality-calendar";
 import type { DayData, ViewMode } from "@/lib/types";
 import { format } from "date-fns";
 
-// Helper to generate random data for a given date
-const generateDataForDay = (date: Date): DayData => {
-  const volatility = Math.random();
-  const liquidity = Math.random();
-  const performance = (Math.random() - 0.5) * 5;
-  const open = 100 + Math.random() * 10;
-  const close = open + (performance / 100) * open;
-  const high = Math.max(open, close) + Math.random() * 2;
-  const low = Math.min(open, close) - Math.random() * 2;
-  
-  return {
-    date: date,
-    volatility,
-    liquidity,
-    performance,
-    price: { open, high, low, close },
-    history: Array.from({ length: 12 }, (_, i) => ({
-      month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
-      volatility: Math.random() * 0.8 + 0.1,
-      liquidity: Math.random() * 800 + 200,
-    }))
-  };
-};
-
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
   const [selectedData, setSelectedData] = React.useState<DayData | null>(null);
@@ -55,14 +31,6 @@ export default function Home() {
     setInstrument(newInstrument);
   };
   
-  // Initialize with today's data on mount
-  React.useEffect(() => {
-    if (selectedDay && !selectedData) {
-        const todayData = generateDataForDay(selectedDay);
-        setSelectedData(todayData);
-    }
-  }, [selectedDay, selectedData]);
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-7xl mx-auto">
