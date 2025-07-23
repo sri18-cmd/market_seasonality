@@ -15,7 +15,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPanel } from "@/components/dashboard-panel";
 import { SeasonalityCalendar } from "@/components/seasonality-calendar";
 import type { DayData, ViewMode } from "@/lib/types";
-import { format } from "date-fns";
 
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
@@ -23,9 +22,9 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(new Date());
   const [instrument, setInstrument] = React.useState("btc");
 
-  const handleDaySelect = (data: DayData | null) => {
+  const handleDaySelect = React.useCallback((data: DayData | null) => {
     setSelectedData(data);
-  };
+  }, []);
   
   const handleInstrumentChange = (newInstrument: string) => {
     setInstrument(newInstrument);
