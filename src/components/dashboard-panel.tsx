@@ -14,6 +14,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Activity,
 } from "lucide-react";
 import {
   BarChart,
@@ -50,7 +51,7 @@ function formatPrice(price: number) {
 }
 
 function formatPercent(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
+  return `${(value).toFixed(1)}%`;
 }
 
 function aggregateData(data: DayData[]): Omit<DayData, 'date' | 'history'> | null {
@@ -100,7 +101,6 @@ export function DashboardPanel({
       return;
     }
     
-    const monthData = generateMonthData(selectedDay, instrument);
     let dataForPeriod: DayData[] = [];
     
     if (viewMode === 'day' && selectedData) {
@@ -111,20 +111,22 @@ export function DashboardPanel({
       const weekEnd = endOfWeek(selectedDay, { weekStartsOn: 1 });
       const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
       daysInWeek.forEach(day => {
-        const dayKey = format(day, "yyyy-MM-dd");
         // We might need to generate data for previous/next months if the week spans them
-        const dataForDay = monthData.get(dayKey) ?? generateMonthData(day, instrument).get(dayKey);
-        if(dataForDay) dataForPeriod.push(dataForDay);
+        const monthData = generateMonthData(day, instrument);
+        const dayKey = format(day, "yyyy-MM-dd");
+        const dataForDay = monthData.get(dayKey);
+        if(dataForDay && !dataForDay.unavailable) dataForPeriod.push(dataForDay);
       });
       setTitle(`Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
     } else if (viewMode === 'month') {
         const monthStart = startOfMonth(selectedDay);
         const monthEnd = endOfMonth(selectedDay);
         const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const monthData = generateMonthData(selectedDay, instrument);
         daysInMonth.forEach(day => {
             const dayKey = format(day, "yyyy-MM-dd");
             const data = monthData.get(dayKey);
-            if(data) dataForPeriod.push(data);
+            if(data && !data.unavailable) dataForPeriod.push(data);
         });
         setTitle(selectedDay.toLocaleDateString("en-US", { year: "numeric", month: "long" }));
     }
@@ -282,9 +284,9 @@ export function DashboardPanel({
                 <RechartsLineChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" stroke="#888888" fontSize={12} />
-                  <YAxis tickFormatter={formatPercent} stroke="#888888" fontSize={12} />
+                  <YAxis tickFormatter={(v) => formatPercent(v*100)} stroke="#888888" fontSize={12} />
                   <Tooltip 
-                    formatter={(value: number) => formatPercent(value)}
+                    formatter={(value: number) => formatPercent(value * 100)}
                     contentStyle={{ 
                       background: 'hsl(var(--background))', 
                       border: '1px solid hsl(var(--border))', 
@@ -317,6 +319,28 @@ export function DashboardPanel({
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
+             <div>
+              <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+                <Activity className="size-5" /> Historical Performance (12m)
+              </h3>
+              <ResponsiveContainer width="100%" height={150}>
+                <RechartsLineChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+                  <YAxis tickFormatter={(v) => formatPercent(v)} stroke="#888888" fontSize={12} />
+                  <Tooltip 
+                    formatter={(value: number) => formatPercent(value)}
+                    contentStyle={{ 
+                      background: 'hsl(var(--background))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: 'var(--radius)'
+                    }}
+                  />
+                  <Line type="monotone" dataKey="performance" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r: 4}} activeDot={{r: 6}}/>
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </div>
           </>
         )}
 
@@ -324,5 +348,3 @@ export function DashboardPanel({
     </Card>
   );
 }
-
-    

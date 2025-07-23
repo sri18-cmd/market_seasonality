@@ -13,6 +13,7 @@ export interface DayData {
     month: string;
     volatility: number;
     liquidity: number;
+    performance: number;
   }[];
   unavailable?: boolean;
 }

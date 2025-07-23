@@ -66,6 +66,7 @@ export function generateMonthData(dateInMonth: Date, instrument: string): Map<st
         month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
         volatility: random() * 0.8 + 0.1,
         liquidity: random() * 800 + 200,
+        performance: (random() - 0.5) * 5,
       }))
     });
   });
@@ -78,7 +79,8 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
   const { data } = props;
 
   if (!data || props.displayMonth.getMonth() !== data.date.getMonth()) {
-    return <div className="h-full w-full p-4 flex items-center justify-center">{props.date.getDate()}</div>;
+    // Hides days from other months
+    return <div className="h-full w-full"></div>;
   }
   
   const { volatility, liquidity, performance, unavailable } = data;
@@ -181,30 +183,16 @@ export function SeasonalityCalendar({
     const newMonthData = generateMonthData(month, instrument);
     setData(newMonthData);
     
-    // When month data changes (due to instrument or month change),
-    // find the data for the currently selected day and pass it up.
     if (selectedDay) {
         const dayKey = format(selectedDay, "yyyy-MM-dd");
-        onDaySelect(newMonthData.get(dayKey) || null);
+        const dayData = newMonthData.get(dayKey);
+         if (dayData && !dayData.unavailable) {
+          onDaySelect(dayData);
+        } else {
+          onDaySelect(null);
+        }
     }
-  }, [month, instrument, onDaySelect, selectedDay]);
-
-  React.useEffect(() => {
-    // This effect handles passing up the correct day's data when the selected day changes.
-    if (selectedDay) {
-      const dayKey = format(selectedDay, "yyyy-MM-dd");
-      // Data for the current month should already be in state.
-      // If selectedDay is in a different month, the other useEffect will handle it.
-      const dayData = data.get(dayKey);
-      if (dayData && !dayData.unavailable) {
-        onDaySelect(dayData);
-      } else {
-        onDaySelect(null);
-      }
-    } else {
-      onDaySelect(null);
-    }
-  }, [selectedDay, data, onDaySelect]);
+  }, [month, instrument, selectedDay]);
 
 
   const handleDaySelection = (day: Date | undefined) => {
@@ -225,6 +213,7 @@ export function SeasonalityCalendar({
         onMonthChange={setMonth}
         ISOWeek
         disabled={isFuture}
+        showOutsideDays={false}
         components={{
           Day: (props) => (
             <CustomDay {...props} data={data.get(format(props.date, "yyyy-MM-dd"))} />
