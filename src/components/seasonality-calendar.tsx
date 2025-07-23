@@ -223,8 +223,6 @@ export function SeasonalityCalendar({
         onSelect={handleDaySelection}
         month={month}
         onMonthChange={setMonth}
-        showOutsideDays
-        fixedWeeks
         ISOWeek
         disabled={isFuture}
         components={{
