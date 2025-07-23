@@ -14,6 +14,8 @@ import {
   TrendingDown,
   LineChart,
   DollarSign,
+  Calendar as CalendarIcon,
+  AreaChart,
 } from "lucide-react";
 import {
   BarChart,
@@ -23,13 +25,22 @@ import {
   Tooltip,
   ResponsiveContainer,
   LabelList,
+  Area,
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
 } from "recharts";
+import { Separator } from "./ui/separator";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
   }).format(price);
+}
+
+function formatPercent(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 export function DashboardPanel({
@@ -41,9 +52,9 @@ export function DashboardPanel({
 }) {
   if (!selectedData) {
     return (
-      <Card className="w-full md:w-96">
+      <Card className="w-full lg:w-[24rem] xl:w-[26rem] sticky top-8">
         <CardHeader>
-          <CardTitle>Market Seasonality Explorer</CardTitle>
+          <CardTitle>Market Insights</CardTitle>
           <CardDescription>Select a date to view its metrics</CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,7 +67,7 @@ export function DashboardPanel({
     );
   }
 
-  const { date, volatility, liquidity, performance, price } = selectedData;
+  const { date, volatility, liquidity, performance, price, history } = selectedData;
   const performanceColor = performance >= 0 ? "text-green-600" : "text-red-600";
   const PerformanceIcon = performance >= 0 ? TrendingUp : TrendingDown;
 
@@ -68,9 +79,10 @@ export function DashboardPanel({
   ];
 
   return (
-    <Card className="w-full md:w-96 shadow-lg border-2">
+    <Card className="w-full lg:w-[24rem] xl:w-[26rem] shadow-lg border-2 sticky top-8">
       <CardHeader>
-        <CardTitle className="font-headline">
+        <CardTitle className="font-headline flex items-center gap-2">
+          <CalendarIcon className="size-6" />
           {date.toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
@@ -82,35 +94,27 @@ export function DashboardPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <PerformanceIcon className={`size-6 ${performanceColor}`} />
-              <span className="font-semibold">Performance</span>
-            </div>
-            <span className={`font-bold text-lg ${performanceColor}`}>
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+             <div className="flex items-center justify-center gap-2">
+                <PerformanceIcon className={`size-5 ${performanceColor}`} />
+                <span className="text-sm font-semibold">Performance</span>
+             </div>
+             <span className={`font-bold text-2xl ${performanceColor}`}>
               {performance.toFixed(2)}%
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Waves className="size-6 text-blue-500" />
-              <span className="font-semibold">Volatility</span>
-            </div>
-            <span className="font-bold text-lg text-blue-500">
+           <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+             <div className="flex items-center justify-center gap-2">
+                <Waves className="size-5 text-blue-500" />
+                <span className="text-sm font-semibold">Volatility</span>
+             </div>
+             <span className="font-bold text-2xl text-blue-500">
               {(volatility * 100).toFixed(1)}%
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <DollarSign className="size-6 text-amber-500" />
-              <span className="font-semibold">Liquidity</span>
-            </div>
-            <span className="font-bold text-lg text-amber-500">
-              {(liquidity * 1000).toFixed(0)}M
-            </span>
-          </div>
         </div>
+
         <div>
           <h3 className="mb-2 font-semibold text-foreground flex items-center gap-2">
             <LineChart className="size-5" /> Price Action
@@ -134,6 +138,53 @@ export function DashboardPanel({
             </BarChart>
           </ResponsiveContainer>
         </div>
+        
+        <Separator />
+
+        <div>
+          <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+            <AreaChart className="size-5" /> Historical Volatility (12m)
+          </h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <RechartsLineChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+              <YAxis tickFormatter={formatPercent} stroke="#888888" fontSize={12} />
+              <Tooltip 
+                formatter={(value: number) => formatPercent(value)}
+                contentStyle={{ 
+                  background: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))', 
+                  borderRadius: 'var(--radius)'
+                }}
+              />
+              <Line type="monotone" dataKey="volatility" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r: 4}} activeDot={{r: 6}}/>
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div>
+           <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+            <DollarSign className="size-5" /> Historical Liquidity (12m)
+          </h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={history} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="month" stroke="#888888" fontSize={12} />
+              <YAxis tickFormatter={(val) => `${val}M`} stroke="#888888" fontSize={12}/>
+              <Tooltip 
+                formatter={(value: number) => `${value.toFixed(0)}M`}
+                 contentStyle={{ 
+                  background: 'hsl(var(--background))', 
+                  border: '1px solid hsl(var(--border))', 
+                  borderRadius: 'var(--radius)'
+                }}
+              />
+              <Bar dataKey="liquidity" fill="hsl(var(--accent))" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
       </CardContent>
     </Card>
   );

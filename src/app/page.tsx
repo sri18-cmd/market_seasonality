@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, Bitcoin, CandlestickChart } from "lucide-react";
+import { AreaChart, Bitcoin, CandlestickChart, DollarSign } from "lucide-react";
 
 import {
   Select,
@@ -40,6 +40,11 @@ export default function Home() {
       liquidity,
       performance,
       price: { open, high, low, close },
+      history: Array.from({ length: 12 }, (_, i) => ({
+        month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
+        volatility: Math.random() * 0.8 + 0.1,
+        liquidity: Math.random() * 800 + 200,
+      }))
     };
     setSelectedData(todayData);
   }, []);
@@ -52,7 +57,7 @@ export default function Home() {
              <CandlestickChart className="h-10 w-10 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">
-            Seasonality Insights
+            Market Seasonality
           </h1>
           <p className="mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
             Explore historical volatility, liquidity, and performance with our interactive market calendar.
@@ -73,11 +78,29 @@ export default function Home() {
                       <span>BTC/USD</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="eth" disabled>
+                  <SelectItem value="eth">
                      <div className="flex items-center gap-2">
-                      <BarChart3 className="size-5 text-gray-400"/> 
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 417"><path fill="#343434" d="m127.961 0l-2.795 9.5v275.668l2.795 2.79l127.962-75.638z"/><path fill="#8C8C8C" d="M127.962 0L0 212.32l127.962 75.638V0z"/><path fill="#3C3C3B" d="m127.961 300.478l-2.795-2.08l-125.166-73.282l127.961 191.21z"/><path fill="#8C8C8C" d="M127.962 416.51V300.478l127.962-75.638z"/></svg>
                       <span>ETH/USD</span>
                     </div>
+                  </SelectItem>
+                   <SelectItem value="sol">
+                     <div className="flex items-center gap-2">
+                       <AreaChart className="size-5 text-purple-400" />
+                       <span>SOL/USD</span>
+                     </div>
+                  </SelectItem>
+                  <SelectItem value="tsla">
+                     <div className="flex items-center gap-2">
+                       <DollarSign className="size-5 text-red-500" />
+                       <span>TSLA</span>
+                     </div>
+                  </SelectItem>
+                   <SelectItem value="aapl">
+                     <div className="flex items-center gap-2">
+                       <DollarSign className="size-5 text-gray-500" />
+                       <span>AAPL</span>
+                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>

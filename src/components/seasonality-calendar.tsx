@@ -40,6 +40,11 @@ function generateMonthData(dateInMonth: Date): Map<string, DayData> {
       liquidity,
       performance,
       price: { open, high, low, close },
+      history: Array.from({ length: 12 }, (_, i) => ({
+        month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
+        volatility: Math.random() * 0.8 + 0.1,
+        liquidity: Math.random() * 800 + 200,
+      }))
     });
   });
 

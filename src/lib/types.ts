@@ -9,6 +9,11 @@ export interface DayData {
     low: number;
     close: number;
   };
+  history: {
+    month: string;
+    volatility: number;
+    liquidity: number;
+  }[];
 }
 
 export type ViewMode = "day" | "week" | "month";
