@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as React from "react";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
 import {
   ArrowDown,
   ArrowUp,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
 
-function generateMonthData(dateInMonth: Date): Map<string, DayData> {
+function generateMonthData(dateInMonth: Date, instrument: string): Map<string, DayData> {
   const data = new Map<string, DayData>();
   const days = eachDayOfInterval({
     start: startOfMonth(dateInMonth),
@@ -26,13 +27,20 @@ function generateMonthData(dateInMonth: Date): Map<string, DayData> {
   });
 
   days.forEach((day) => {
-    const volatility = Math.random();
-    const liquidity = Math.random();
-    const performance = (Math.random() - 0.5) * 5;
-    const open = 100 + Math.random() * 10;
+    // Seed random number generation with date and instrument to make it deterministic
+    let seed = day.getTime() + instrument.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random = () => {
+      let x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    }
+
+    const volatility = random();
+    const liquidity = random();
+    const performance = (random() - 0.5) * 5;
+    const open = 100 + random() * 10;
     const close = open + (performance / 100) * open;
-    const high = Math.max(open, close) + Math.random() * 2;
-    const low = Math.min(open, close) - Math.random() * 2;
+    const high = Math.max(open, close) + random() * 2;
+    const low = Math.min(open, close) - random() * 2;
     
     data.set(format(day, "yyyy-MM-dd"), {
       date: day,
@@ -42,8 +50,8 @@ function generateMonthData(dateInMonth: Date): Map<string, DayData> {
       price: { open, high, low, close },
       history: Array.from({ length: 12 }, (_, i) => ({
         month: new Date(2023, i, 1).toLocaleString('default', { month: 'short' }),
-        volatility: Math.random() * 0.8 + 0.1,
-        liquidity: Math.random() * 800 + 200,
+        volatility: random() * 0.8 + 0.1,
+        liquidity: random() * 800 + 200,
       }))
     });
   });
@@ -116,27 +124,44 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
 
 export function SeasonalityCalendar({ 
   onDaySelect,
-  instrument
+  instrument,
+  initialSelectedData
 }: { 
   onDaySelect: (data: DayData | null) => void;
   instrument: string;
+  initialSelectedData: DayData | null;
 }) {
-  const [month, setMonth] = React.useState(new Date());
-  const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(new Date());
+  const [month, setMonth] = React.useState(initialSelectedData?.date || new Date());
+  const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(initialSelectedData?.date || new Date());
   const [data, setData] = React.useState<Map<string, DayData>>(new Map());
 
   React.useEffect(() => {
-    setData(generateMonthData(month));
+    setData(generateMonthData(month, instrument));
   }, [month, instrument]);
   
   React.useEffect(() => {
     if (selectedDay) {
       const dayData = data.get(format(selectedDay, "yyyy-MM-dd"));
-      onDaySelect(dayData || null);
+      if (dayData) {
+        // Only call onDaySelect if the data is different
+        if (!initialSelectedData || !isSameDay(dayData.date, initialSelectedData.date) || instrument !== (initialSelectedData as any).instrument) {
+          onDaySelect(dayData);
+        }
+      }
     } else {
       onDaySelect(null);
     }
-  }, [selectedDay, data, onDaySelect]);
+  }, [selectedDay, data, onDaySelect, initialSelectedData, instrument]);
+  
+  // This effect ensures that when the instrument changes,
+  // we select the same day in the new month's data set.
+  React.useEffect(() => {
+    if (data.size > 0 && selectedDay) {
+        const dayData = data.get(format(selectedDay, "yyyy-MM-dd"));
+        onDaySelect(dayData || null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, instrument]);
 
 
   return (

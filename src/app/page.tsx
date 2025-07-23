@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -40,26 +41,28 @@ const generateDataForDay = (date: Date): DayData => {
   };
 };
 
-
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
   const [selectedData, setSelectedData] = React.useState<DayData | null>(null);
   const [instrument, setInstrument] = React.useState("btc");
-  const [calendarData, setCalendarData] = React.useState<Map<string, DayData>>(new Map());
-  
+
   const handleDaySelect = (data: DayData | null) => {
     setSelectedData(data);
   };
   
   const handleInstrumentChange = (newInstrument: string) => {
     setInstrument(newInstrument);
+    // When instrument changes, we clear selected data to force calendar to re-select
+    setSelectedData(null); 
   };
   
   // Initialize with today's data on mount
   React.useEffect(() => {
-    const todayData = generateDataForDay(new Date());
-    setSelectedData(todayData);
-  }, []);
+    if (!selectedData) {
+        const todayData = generateDataForDay(new Date());
+        setSelectedData(todayData);
+    }
+  }, [selectedData]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6 lg:p-8">
@@ -129,6 +132,7 @@ export default function Home() {
             <SeasonalityCalendar 
               onDaySelect={handleDaySelect}
               instrument={instrument}
+              initialSelectedData={selectedData}
             />
             
           </div>
