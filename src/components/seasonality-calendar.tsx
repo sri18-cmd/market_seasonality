@@ -181,10 +181,10 @@ export function SeasonalityCalendar({
   const [month, setMonth] = React.useState(selectedDay || new Date());
   
   React.useEffect(() => {
-    if (selectedDay && selectedDay.getMonth() !== month.getMonth()) {
+    if (selectedDay) {
         setMonth(selectedDay);
     }
-  }, [selectedDay, month]);
+  }, [selectedDay]);
 
   const handleMonthChange = (newMonth: Date) => {
     setMonth(newMonth);
@@ -196,9 +196,6 @@ export function SeasonalityCalendar({
         return;
     }
     onSelectedDayChange(day);
-    if (day && day.getMonth() !== month.getMonth()) {
-      handleMonthChange(day);
-    }
   };
 
 
