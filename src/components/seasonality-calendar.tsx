@@ -2,10 +2,11 @@
 "use client";
 
 import * as React from "react";
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, isFuture, isSameDay } from "date-fns";
 import {
   ArrowDown,
   ArrowUp,
+  Ban,
 } from "lucide-react";
 import { DayPicker, type DayProps } from "react-day-picker";
 
@@ -32,6 +33,19 @@ export function generateMonthData(dateInMonth: Date, instrument: string): Map<st
     const random = () => {
       let x = Math.sin(seed++) * 10000;
       return x - Math.floor(x);
+    }
+
+    if (isFuture(day)) {
+      data.set(format(day, "yyyy-MM-dd"), {
+        date: day,
+        volatility: 0,
+        liquidity: 0,
+        performance: 0,
+        price: { open: 0, high: 0, low: 0, close: 0 },
+        history: [],
+        unavailable: true
+      });
+      return;
     }
 
     const volatility = random();
@@ -66,8 +80,33 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
   if (!data || props.displayMonth.getMonth() !== data.date.getMonth()) {
     return <div className="h-full w-full p-4 flex items-center justify-center">{props.date.getDate()}</div>;
   }
+  
+  const { volatility, liquidity, performance, unavailable } = data;
 
-  const { volatility, liquidity, performance } = data;
+  if (unavailable) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="relative h-full w-full bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+            >
+              <div className="flex h-full flex-col justify-between p-2">
+                <div className="flex justify-between items-start">
+                  <span className="text-sm font-medium">{props.date.getDate()}</span>
+                  <Ban className="size-4" />
+                </div>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>No data available for future dates</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
 
   const getVolatilityClass = () => {
     if (volatility > 0.7) return "bg-heatmap-high hover:bg-red-200/50";
@@ -105,7 +144,7 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
         </TooltipTrigger>
         <TooltipContent className="bg-background border-primary">
           <p className="font-bold">
-            {data.date.toLocaleDateString(undefined, {
+            {data.date.toLocaleString(undefined, {
               month: "short",
               day: "numeric",
             })}
@@ -148,7 +187,7 @@ export function SeasonalityCalendar({
         const dayKey = format(selectedDay, "yyyy-MM-dd");
         onDaySelect(newMonthData.get(dayKey) || null);
     }
-  }, [month, instrument]);
+  }, [month, instrument, onDaySelect, selectedDay]);
 
   React.useEffect(() => {
     // This effect handles passing up the correct day's data when the selected day changes.
@@ -156,7 +195,12 @@ export function SeasonalityCalendar({
       const dayKey = format(selectedDay, "yyyy-MM-dd");
       // Data for the current month should already be in state.
       // If selectedDay is in a different month, the other useEffect will handle it.
-      onDaySelect(data.get(dayKey) || null);
+      const dayData = data.get(dayKey);
+      if (dayData && !dayData.unavailable) {
+        onDaySelect(dayData);
+      } else {
+        onDaySelect(null);
+      }
     } else {
       onDaySelect(null);
     }
@@ -164,6 +208,9 @@ export function SeasonalityCalendar({
 
 
   const handleDaySelection = (day: Date | undefined) => {
+    if (day && isFuture(day)) {
+        return;
+    }
     onSelectedDayChange(day);
   };
 
@@ -179,6 +226,7 @@ export function SeasonalityCalendar({
         showOutsideDays
         fixedWeeks
         ISOWeek
+        disabled={isFuture}
         components={{
           Day: (props) => (
             <CustomDay {...props} data={data.get(format(props.date, "yyyy-MM-dd"))} />
@@ -197,7 +245,7 @@ export function SeasonalityCalendar({
           day_selected: "ring-2 ring-primary ring-offset-2",
           day_today: "font-bold text-primary",
           day_outside: "text-muted-foreground opacity-50",
-          day_disabled: "text-muted-foreground opacity-50",
+          day_disabled: "text-muted-foreground opacity-50 cursor-not-allowed",
           nav: "space-x-1 flex items-center mb-4",
           caption_label: "text-xl font-bold font-headline",
         }}

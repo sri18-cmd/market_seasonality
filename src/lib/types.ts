@@ -14,6 +14,7 @@ export interface DayData {
     volatility: number;
     liquidity: number;
   }[];
+  unavailable?: boolean;
 }
 
 export type ViewMode = "day" | "week" | "month";
