@@ -3,13 +3,6 @@
 
 import type { DayData, ViewMode } from "@/lib/types";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
   Waves,
   TrendingUp,
   TrendingDown,
@@ -19,6 +12,8 @@ import {
   AreaChart,
   Download,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   BarChart,
@@ -35,9 +30,16 @@ import {
 } from "recharts";
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { generateMonthData } from "./seasonality-calendar";
 import React from "react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from "date-fns";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
@@ -63,7 +65,7 @@ function aggregateData(data: DayData[]): Omit<DayData, 'date' | 'history'> | nul
   const high = Math.max(...data.map(d => d.price.high));
   const low = Math.min(...data.map(d => d.price.low));
 
-  const performance = ((close - open) / open) * 100;
+  const performance = open === 0 ? 0 : ((close - open) / open);
 
   return {
     volatility: totalVolatility / data.length,
@@ -79,11 +81,13 @@ export function DashboardPanel({
   viewMode,
   instrument,
   selectedDay,
+  onSelectedDayChange,
 }: {
   selectedData: DayData | null;
   viewMode: ViewMode;
   instrument: string;
   selectedDay: Date | undefined;
+  onSelectedDayChange: (day: Date | undefined) => void;
 }) {
   const [periodData, setPeriodData] = React.useState<Omit<DayData, 'date' | 'history'> | null>(null);
   const [title, setTitle] = React.useState<string>("Market Insights");
@@ -106,8 +110,9 @@ export function DashboardPanel({
       const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
       daysInWeek.forEach(day => {
         const dayKey = format(day, "yyyy-MM-dd");
-        const data = monthData.get(dayKey);
-        if(data) dataForPeriod.push(data);
+        // We might need to generate data for previous/next months if the week spans them
+        const dataForDay = monthData.get(dayKey) ?? generateMonthData(day, instrument).get(dayKey);
+        if(dataForDay) dataForPeriod.push(dataForDay);
       });
       setTitle(`Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
     } else if (viewMode === 'month') {
@@ -131,6 +136,19 @@ export function DashboardPanel({
     }
 
   }, [selectedData, viewMode, selectedDay, instrument]);
+
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (!selectedDay) return;
+    let newDate;
+    if (viewMode === 'day') {
+      newDate = direction === 'prev' ? subDays(selectedDay, 1) : addDays(selectedDay, 1);
+    } else if (viewMode === 'week') {
+      newDate = direction === 'prev' ? subWeeks(selectedDay, 1) : addWeeks(selectedDay, 1);
+    } else { // month
+      newDate = direction === 'prev' ? subMonths(selectedDay, 1) : addMonths(selectedDay, 1);
+    }
+    onSelectedDayChange(newDate);
+  };
 
 
   const handleDownload = () => {
@@ -165,7 +183,6 @@ export function DashboardPanel({
   const history = selectedData?.history ?? [];
   const performanceColor = performance >= 0 ? "text-green-600" : "text-red-600";
   const PerformanceIcon = performance >= 0 ? TrendingUp : TrendingDown;
-  const Icon = viewMode === 'day' ? CalendarIcon : CalendarDays;
 
   const priceData = [
     { name: "Open", value: price.open },
@@ -177,12 +194,17 @@ export function DashboardPanel({
   return (
     <Card className="w-full lg:w-[24rem] xl:w-[26rem] shadow-lg border-2 sticky top-8">
       <CardHeader className="flex flex-row items-start justify-between">
-        <div>
+        <div className="flex-1">
           <CardTitle className="font-headline flex items-center gap-2">
-            <Icon className="size-6" />
-            {title}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleNavigate('prev')}>
+                <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="text-center text-lg">{title}</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleNavigate('next')}>
+                <ChevronRight className="h-5 w-5" />
+            </Button>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-center mt-1">
             Detailed metrics for the selected {viewMode}
           </CardDescription>
         </div>
@@ -198,7 +220,7 @@ export function DashboardPanel({
                 <span className="text-sm font-semibold">Performance</span>
              </div>
              <span className={`font-bold text-2xl ${performanceColor}`}>
-              {performance.toFixed(2)}%
+              {(performance * 100).toFixed(2)}%
             </span>
           </div>
            <div className="flex flex-col p-3 rounded-lg bg-muted/50">

@@ -30,6 +30,10 @@ export default function Home() {
     setInstrument(newInstrument);
   };
   
+  const handleSelectedDayChange = (day: Date | undefined) => {
+    setSelectedDay(day);
+  };
+  
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-7xl mx-auto">
@@ -99,7 +103,7 @@ export default function Home() {
               onDaySelect={handleDaySelect}
               instrument={instrument}
               selectedDay={selectedDay}
-              onSelectedDayChange={setSelectedDay}
+              onSelectedDayChange={handleSelectedDayChange}
               viewMode={viewMode}
             />
             
@@ -111,6 +115,7 @@ export default function Home() {
                 viewMode={viewMode} 
                 instrument={instrument}
                 selectedDay={selectedDay}
+                onSelectedDayChange={handleSelectedDayChange}
               />
           </div>
         </main>
