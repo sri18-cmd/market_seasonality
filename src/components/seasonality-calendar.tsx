@@ -122,46 +122,42 @@ function CustomDay(props: DayProps & { data: DayData | undefined }) {
 }
 
 
-export function SeasonalityCalendar({ 
+export function SeasonalityCalendar({
   onDaySelect,
   instrument,
-  initialSelectedData
-}: { 
+  selectedDay,
+  onSelectedDayChange,
+}: {
   onDaySelect: (data: DayData | null) => void;
   instrument: string;
-  initialSelectedData: DayData | null;
+  selectedDay: Date | undefined;
+  onSelectedDayChange: (day: Date | undefined) => void;
 }) {
-  const [month, setMonth] = React.useState(initialSelectedData?.date || new Date());
-  const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(initialSelectedData?.date || new Date());
+  const [month, setMonth] = React.useState(selectedDay || new Date());
   const [data, setData] = React.useState<Map<string, DayData>>(new Map());
 
   React.useEffect(() => {
-    setData(generateMonthData(month, instrument));
-  }, [month, instrument]);
-  
-  React.useEffect(() => {
+    const newMonthData = generateMonthData(month, instrument);
+    setData(newMonthData);
+    
+    // When month data changes (due to instrument or month change),
+    // find the data for the currently selected day and pass it up.
     if (selectedDay) {
-      const dayData = data.get(format(selectedDay, "yyyy-MM-dd"));
-      if (dayData) {
-        // Only call onDaySelect if the data is different
-        if (!initialSelectedData || !isSameDay(dayData.date, initialSelectedData.date) || instrument !== (initialSelectedData as any).instrument) {
-          onDaySelect(dayData);
-        }
-      }
+        const dayKey = format(selectedDay, "yyyy-MM-dd");
+        onDaySelect(newMonthData.get(dayKey) || null);
+    }
+  }, [month, instrument, selectedDay, onDaySelect]);
+
+
+  const handleDaySelection = (day: Date | undefined) => {
+    onSelectedDayChange(day);
+    if (day) {
+      const dayKey = format(day, "yyyy-MM-dd");
+      onDaySelect(data.get(dayKey) || null);
     } else {
       onDaySelect(null);
     }
-  }, [selectedDay, data, onDaySelect, initialSelectedData, instrument]);
-  
-  // This effect ensures that when the instrument changes,
-  // we select the same day in the new month's data set.
-  React.useEffect(() => {
-    if (data.size > 0 && selectedDay) {
-        const dayData = data.get(format(selectedDay, "yyyy-MM-dd"));
-        onDaySelect(dayData || null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, instrument]);
+  };
 
 
   return (
@@ -169,7 +165,7 @@ export function SeasonalityCalendar({
        <DayPicker
         mode="single"
         selected={selectedDay}
-        onSelect={setSelectedDay}
+        onSelect={handleDaySelection}
         month={month}
         onMonthChange={setMonth}
         showOutsideDays

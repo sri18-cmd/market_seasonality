@@ -44,6 +44,7 @@ const generateDataForDay = (date: Date): DayData => {
 export default function Home() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("day");
   const [selectedData, setSelectedData] = React.useState<DayData | null>(null);
+  const [selectedDay, setSelectedDay] = React.useState<Date | undefined>(new Date());
   const [instrument, setInstrument] = React.useState("btc");
 
   const handleDaySelect = (data: DayData | null) => {
@@ -52,17 +53,15 @@ export default function Home() {
   
   const handleInstrumentChange = (newInstrument: string) => {
     setInstrument(newInstrument);
-    // When instrument changes, we clear selected data to force calendar to re-select
-    setSelectedData(null); 
   };
   
   // Initialize with today's data on mount
   React.useEffect(() => {
-    if (!selectedData) {
-        const todayData = generateDataForDay(new Date());
+    if (selectedDay && !selectedData) {
+        const todayData = generateDataForDay(selectedDay);
         setSelectedData(todayData);
     }
-  }, [selectedData]);
+  }, [selectedDay, selectedData]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6 lg:p-8">
@@ -132,7 +131,8 @@ export default function Home() {
             <SeasonalityCalendar 
               onDaySelect={handleDaySelect}
               instrument={instrument}
-              initialSelectedData={selectedData}
+              selectedDay={selectedDay}
+              onSelectedDayChange={setSelectedDay}
             />
             
           </div>
