@@ -39,7 +39,8 @@ import {
 } from "@/components/ui/card";
 import { generateMonthData } from "./seasonality-calendar";
 import React from "react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isFuture } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-US", {
@@ -91,6 +92,7 @@ export function DashboardPanel({
 }) {
   const [periodData, setPeriodData] = React.useState<Omit<DayData, 'date' | 'history'> | null>(null);
   const [title, setTitle] = React.useState<string>("Market Insights");
+  const { toast } = useToast();
 
   React.useEffect(() => {
     if (!selectedDay || !instrument) {
@@ -147,6 +149,16 @@ export function DashboardPanel({
     } else { // month
       newDate = direction === 'prev' ? subMonths(selectedDay, 1) : addMonths(selectedDay, 1);
     }
+    
+    if (direction === 'next' && isFuture(newDate)) {
+      toast({
+        title: "Future Data",
+        description: "You are searching for future data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     onSelectedDayChange(newDate);
   };
 
@@ -312,3 +324,5 @@ export function DashboardPanel({
     </Card>
   );
 }
+
+    
